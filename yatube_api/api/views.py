@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
-from django.core.exceptions import SuspiciousOperation
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, permissions, viewsets
+from rest_framework import filters, mixins, permissions, viewsets
 from rest_framework.pagination import LimitOffsetPagination
 
 from .permissions import AuthorOrReadOnly
@@ -53,7 +52,14 @@ class CommentViewSet(viewsets.ModelViewSet):
         )
 
 
-class FollowViewSet(viewsets.ModelViewSet):
+class CreateListViewSet(
+    mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet
+):
+
+    pass
+
+
+class FollowViewSet(CreateListViewSet):
     queryset = Follow.objects.all()
     serializer_class = FollowSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -67,11 +73,4 @@ class FollowViewSet(viewsets.ModelViewSet):
         return new_queryset
 
     def perform_create(self, serializer):
-        user = self.request.user.username
-        following = serializer.initial_data["following"]
-        if user == following:
-            raise SuspiciousOperation(
-                "Вы не можете подписаться на самого себя!"
-            )
-
         serializer.save(user=self.request.user)
